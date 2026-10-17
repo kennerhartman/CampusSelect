@@ -1,0 +1,22 @@
+# xcode
+
+DerivedData/
+build/
+*.build/
+
+xcuserdata/
+*.xcuserstate
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+
+# swift
+
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# macos
+
+.DS_Store
