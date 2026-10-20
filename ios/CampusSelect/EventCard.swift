@@ -9,11 +9,138 @@
 import SwiftUI
 
 struct EventCard: View {
+    var event: EventData
+    
+    private var parsedDates: (start: Date, end: Date)? {
+        guard let start = try? Date(event.start_time, strategy: .iso8601),
+              let end = try? Date(event.end_time, strategy: .iso8601) else {
+            return nil
+        }
+        
+        return (start, end)
+    }
+    
     var body: some View {
-        Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)
+        HStack(alignment: .top, spacing: 16) {
+            if let dates = parsedDates {
+                self.calendarIcon(from: dates.start)
+            } else {
+                Image(systemName: "calendar")
+                    .font(.title2)
+                    .foregroundStyle(.secondary)
+                    .frame(width: 44, height: 44)
+            }
+            
+            VStack(alignment: .leading, spacing: 6) {
+                Text(self.event.title)
+                    .font(.headline)
+                    .foregroundStyle(.primary)
+                    .lineLimit(2)
+                
+                if let description = self.event.description, !description.isEmpty {
+                    Text(description)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(3)
+                        .padding(.bottom, 2)
+                }
+                
+                if let dates = self.parsedDates {
+                    HStack(spacing: 4) {
+                        Image(systemName: "clock")
+                        
+                        Text(dates.start, format: .dateTime.weekday(.abbreviated).day().hour(.defaultDigits(amPM: .omitted)).minute().month(.abbreviated))
+                        
+                        Text("-")
+                        
+                        Text(dates.end, format: .dateTime.hour().minute())
+                    }
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.secondary)
+                    .environment(\.timeZone, TimeZone(secondsFromGMT: 0)!)
+                }
+            }
+            
+            Spacer(minLength: 0)
+            
+            VStack(spacing: 12) {
+                Button(action: {
+                    // TODO: ADD LOGIC
+                }) {
+                    Image(systemName: "plus")
+                        .font(.subheadline)
+                        .fontWeight(.bold)
+                        .foregroundStyle(.white)
+                        .frame(width: 32, height: 32)
+                        .background(.blue, in: Circle())
+                }
+                .glassEffect(.regular.interactive())
+                
+                Button(action: {
+                    // TODO: ADD LOGIC
+                }) {
+                    Image(systemName: "xmark")
+                        .font(.subheadline)
+                        .fontWeight(.bold)
+                        .foregroundStyle(.red)
+                        .frame(width: 32, height: 32)
+                        .background(Color(.systemRed), in: Circle())
+                }
+                .glassEffect(.regular.interactive())
+            }
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color(.secondarySystemGroupedBackground))
+                .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 4)
+        )
+    }
+    
+    @ViewBuilder
+    private func calendarIcon(from date: Date) -> some View {
+        let day = Calendar.current.component(.day, from: date)
+        
+        VStack(spacing: 2) {
+            Text(date, format: .dateTime.month(.abbreviated)).textCase(.uppercase)
+                .font(.system(size: 10, weight: .bold))
+                .foregroundStyle(.red)
+            
+            Text("\(day)")
+                .font(.system(size: 20, weight: .bold, design: .rounded))
+                .foregroundStyle(.primary)
+        }
+        .frame(width: 48, height: 50)
+        .background(Color(.systemBackground), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .stroke(Color(.systemGray4), lineWidth: 0.5)
+        )
     }
 }
 
 #Preview {
-    EventCard()
+    ScrollView {
+        VStack(spacing: 16) {
+            EventCard(
+                event: EventData(
+                    title: "Home Evening Laser Tag",
+                    description: "High-intensity outdoor laser tag games hosted behind the Manwaring Center.",
+                    start_time: "2026-10-19T19:00:00Z",
+                    end_time: "2026-10-19T22:00:00Z"
+                )
+            )
+            
+            EventCard(
+                event: EventData(
+                    title: "Data Science Society",
+                    description: "Use data analysis, Python, and machine learning to solve real problems across campus infrastructure matrices.",
+                    start_time: "2026-10-21T18:00:00Z",
+                    end_time: "2026-10-21T19:00:00Z"
+                )
+            )
+        }
+        .padding()
+    }
 }
