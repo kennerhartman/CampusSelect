@@ -9,8 +9,8 @@ from util.scraper import scrape_url
 class EventModel(BaseModel):
     title: str = Field(description="The name of the event or academic society.")
     description: str | None = Field(None, description="The event summary, details, or theme.")
-    start_time: str = Field(description="The event start time formatted strictly as an ISO 8601 string: YYYY-MM-DDTHH:MM:SSZ")
-    end_time: str = Field(description="The event end time formatted strictly as an ISO 8601 string: YYYY-MM-DDTHH:MM:SSZ")
+    start_time: str = Field(description="The event start time formatted as an ISO 8601 string with local offset: YYYY-MM-DDTHH:MM:SS-06:00")
+    end_time: str = Field(description="The event end time formatted as an ISO 8601 string with local offset: YYYY-MM-DDTHH:MM:SS-06:00")
 
 class EventPayload(BaseModel):
     events: list[EventModel]
@@ -38,6 +38,7 @@ async def execute():
     
     CRITICAL CONTEXT PARAMETERS:
     - Today's current date reference is: {current_time}.
+    - **TIMEZONE CONVERSION RULE:** The university events are listed in local Mountain Time (MDT, UTC-6). You MUST convert every event time to true UTC before outputting it. Add 6 hours to the local event time so it matches UTC, and format it strictly with the 'Z' suffix (e.g., if an event says 7:00 PM local time, convert it to 01:00 AM UTC the next day: `YYYY-MM-DDTHH:00:00Z`).
     - Extract ONLY events happening over the next 7 days starting from today. Ignore any entries that fall outside this window.
     - Carefully calculate the absolute dates for recurring items based on the reference day.
     - If a meeting entry does not list an explicit end time, default it to exactly 1 hour after the start_time.
