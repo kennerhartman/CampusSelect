@@ -11,37 +11,60 @@ import SwiftData
 import EventKit
 
 struct ContentView: View {
+    @AppStorage("isSetupComplete") private var isSetupComplete: Bool = false
+    
     @Environment(\.modelContext) private var modelContext
 
+    @State private var isDisplayingEditProfileSheet = false
     @State private var isFetching: Bool = false
     @State private var data: [EventData] = []
     
     var body: some View {
         NavigationStack {
-            Button {
-                Task {
-                    await self.fetchEvents()
-                }
-            } label: {
-                Text("Say Hello!")
-            }
-            
-            if self.isFetching {
-                ProgressView()
-            } else {
-                ScrollView {
-                    VStack {
-                        ForEach(self.data) { event in
-                            EventCard(event: event)
+            if self.isSetupComplete {
+                VStack {
+                    Button {
+                        Task {
+                            await self.fetchEvents()
+                        }
+                    } label: {
+                        Text("Fetch Events")
+                    }
+                    
+                    if self.isFetching {
+                        ProgressView()
+                    } else {
+                        ScrollView {
+                            VStack {
+                                ForEach(self.data) { event in
+                                    EventCard(event: event)
+                                }
+                            }
+                            .padding(.horizontal)
                         }
                     }
-                    .padding(.horizontal)
                 }
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button {
+                            self.isDisplayingEditProfileSheet = true
+                        } label: {
+                            Image(systemName: "person.crop.circle")
+                        }
+                    }
+                }
+                .sheet(isPresented: $isDisplayingEditProfileSheet) {
+                    EditProfileSheetView()
+                }
+            } else {
+                SplashView()
             }
         }
     }
     
     private func fetchEvents() async {
+        // TODO: MOVE BACKEND INTERACTION TO A DEDICATED CLASS
+        
         var request: URLRequest = URLRequest(url: URL(string: "http://10.106.10.72:8000/api/fetch-events")!)
         
         request.httpMethod = "POST"
@@ -60,7 +83,7 @@ struct ContentView: View {
         }
         
         do {
-            let (data, response) = try await URLSession.shared.data(for: request)
+            let (data, response) = try await URLSession.shared.data(for: request) // TODO: SWITCH TO UTILIZE SSE WITH URLSession.shared.bytes
             
             guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
                 print("Error fetching events. API came back with status code '\((response as? HTTPURLResponse)?.statusCode ?? -1)'.")
@@ -96,4 +119,5 @@ struct ContentView: View {
 
 #Preview {
     ContentView()
+        .modelContainer(for: UserProfile.self, inMemory: true)
 }

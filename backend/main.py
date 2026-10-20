@@ -239,13 +239,13 @@ async def fetch_events(request: Request, payload: scraper_agent.EventPayload):
 
     payload_as_dict = payload.model_dump()
 
-    if await request.is_disconnected():
-        print("Client disconnected before request could be processed.")
-
-        return []
-
     # university_events = await scraper_agent.execute()
     university_events = mock_data # for now, use data already scraped using Gemini to avoid hitting Gemini API limits during testing
+
+    if await request.is_disconnected():
+        print("Client disconnected before request could be analyzed.")
+
+        return []
 
     return await calendar_agent.execute(events=university_events, users_calendar=payload_as_dict)
 

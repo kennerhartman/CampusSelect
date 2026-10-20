@@ -13,6 +13,7 @@ import SwiftData
 struct CampusSelectApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
+            UserProfile.self,
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 

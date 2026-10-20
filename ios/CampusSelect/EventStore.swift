@@ -9,11 +9,7 @@
 import Foundation
 import EventKit
 
-struct EventsPayload: Encodable {
-    let events: [EventData]
-}
-
-class EventStore {
+final class EventStore {
     static var shared: EventStore = EventStore()
     
     private var store: EKEventStore = EKEventStore()
@@ -89,3 +85,6 @@ class EventStore {
     }
 }
 
+struct EventsPayload: Encodable {
+    let events: [EventData]
+}
