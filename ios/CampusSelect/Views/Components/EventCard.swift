@@ -58,7 +58,6 @@ struct EventCard: View {
                     .font(.caption)
                     .fontWeight(.semibold)
                     .foregroundStyle(.secondary)
-                    .environment(\.timeZone, TimeZone(secondsFromGMT: 0)!)
                 }
             }
             
