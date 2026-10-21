@@ -9,10 +9,12 @@
 import Foundation
 import EventKit
 
-final class EventStore {
-    static var shared: EventStore = EventStore()
+final class EventKitService {
+    static let shared: EventKitService = EventKitService()
     
     private var store: EKEventStore = EKEventStore()
+    
+    private init() {}
     
     func requestAccessToCalendar() {
         self.store.requestFullAccessToEvents { granted, error in
@@ -56,8 +58,8 @@ final class EventStore {
             data.append(
                 EventData(
                     title: event.title,
-                    start_time: event.startDate.ISO8601Format(),
-                    end_time: event.endDate.ISO8601Format()
+                    startTime: event.startDate.ISO8601Format(),
+                    endTime: event.endDate.ISO8601Format()
                 )
             )
         }
@@ -85,6 +87,4 @@ final class EventStore {
     }
 }
 
-struct EventsPayload: Encodable {
-    let events: [EventData]
-}
+

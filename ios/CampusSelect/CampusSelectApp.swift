@@ -28,7 +28,7 @@ struct CampusSelectApp: App {
         WindowGroup {
             ContentView()
                 .onAppear {
-                    EventStore.shared.requestAccessToCalendar()
+                    EventKitService.shared.requestAccessToCalendar()
                 }
         }
         .modelContainer(sharedModelContainer)

@@ -12,8 +12,8 @@ struct EventCard: View {
     var event: EventData
     
     private var parsedDates: (start: Date, end: Date)? {
-        guard let start = try? Date(event.start_time, strategy: .iso8601),
-              let end = try? Date(event.end_time, strategy: .iso8601) else {
+        guard let start = try? Date(event.startTime, strategy: .iso8601),
+              let end = try? Date(event.endTime, strategy: .iso8601) else {
             return nil
         }
         
@@ -37,7 +37,7 @@ struct EventCard: View {
                     .foregroundStyle(.primary)
                     .lineLimit(2)
                 
-                if let description = self.event.description, !description.isEmpty {
+                if let description = self.event.eventDescription, !description.isEmpty {
                     Text(description)
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
@@ -125,18 +125,18 @@ struct EventCard: View {
             EventCard(
                 event: EventData(
                     title: "Home Evening Laser Tag",
-                    description: "High-intensity outdoor laser tag games hosted behind the Manwaring Center.",
-                    start_time: "2026-10-19T19:00:00Z",
-                    end_time: "2026-10-19T22:00:00Z"
+                    eventDescription: "High-intensity outdoor laser tag games hosted behind the Manwaring Center.",
+                    startTime: "2026-10-19T19:00:00Z",
+                    endTime: "2026-10-19T22:00:00Z"
                 )
             )
             
             EventCard(
                 event: EventData(
                     title: "Data Science Society",
-                    description: "Use data analysis, Python, and machine learning to solve real problems across campus infrastructure matrices.",
-                    start_time: "2026-10-21T18:00:00Z",
-                    end_time: "2026-10-21T19:00:00Z"
+                    eventDescription: "Use data analysis, Python, and machine learning to solve real problems across campus infrastructure matrices.",
+                    startTime: "2026-10-21T18:00:00Z",
+                    endTime: "2026-10-21T19:00:00Z"
                 )
             )
         }

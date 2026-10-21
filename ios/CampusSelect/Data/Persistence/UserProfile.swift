@@ -21,11 +21,3 @@ class UserProfile {
         self.gender = gender
     }
 }
-
-enum Gender: String, Codable, CaseIterable, Identifiable {
-    case male = "Male"
-    case female = "Female"
-    case other = "Other"
-    
-    var id: Self { self }
-}

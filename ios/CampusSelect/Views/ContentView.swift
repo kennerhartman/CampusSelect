@@ -25,7 +25,13 @@ struct ContentView: View {
                 VStack {
                     Button {
                         Task {
-                            await self.fetchEvents()
+                            self.isFetching = true
+                            
+                            defer {
+                                self.isFetching = false
+                            }
+                            
+                            self.data = await BackendService.shared.fetchEvents()
                         }
                     } label: {
                         Text("Fetch Events")
@@ -61,61 +67,9 @@ struct ContentView: View {
             }
         }
     }
-    
-    private func fetchEvents() async {
-        // TODO: MOVE BACKEND INTERACTION TO A DEDICATED CLASS
-        
-        var request: URLRequest = URLRequest(url: URL(string: "http://10.106.10.72:8000/api/fetch-events")!)
-        
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        
-        let calendarRawJson = EventStore.shared.asJsonString()
-        
-        if let json = calendarRawJson?.data(using: .utf8) {
-            request.httpBody = json
-        }
-        
-        self.isFetching = true
-        
-        defer {
-            self.isFetching = false
-        }
-        
-        do {
-            let (data, response) = try await URLSession.shared.data(for: request) // TODO: SWITCH TO UTILIZE SSE WITH URLSession.shared.bytes
-            
-            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
-                print("Error fetching events. API came back with status code '\((response as? HTTPURLResponse)?.statusCode ?? -1)'.")
-                
-                return
-            }
-            
-            self.decodeJson(with: data)
-        } catch {
-            print(error)
-        }
-    }
-    
-    private func decodeJson(with data: Data) {
-        self.data = []
-        
-        do {
-            let json: [[String: Any]] = try JSONSerialization.jsonObject(with: data) as? [[String: Any]] ?? []
-            
-            for event in json {
-                let title = event["title"] as! String
-                let description = event["description"] as? String
-                let start_time = event["start_time"] as! String
-                let end_time = event["end_time"] as! String
-                
-                self.data.append(EventData(title: title, description: description, start_time: start_time, end_time: end_time))
-            }
-        } catch {
-            print("Failed to decode json object: \(error)")
-        }
-    }
 }
+
+
 
 #Preview {
     ContentView()
