@@ -1,7 +1,9 @@
 from fastapi import FastAPI, Request
+from sse_starlette import EventSourceResponse
 
 import agents.scraper_agent as scraper_agent
 import agents.calendar_agent as calendar_agent
+from schemas.schema import SSEStreamResponsePayload
 
 mock_data = [
     {
@@ -230,32 +232,43 @@ mock_data = [
 
 app = FastAPI()
 
-@app.post("/api/fetch-events", response_model=list[scraper_agent.EventModel])
-async def fetch_events(request: Request, payload: scraper_agent.EventPayload):
-    if await request.is_disconnected():
-        print("Client disconnected before request could be processed.")
-
-        return []
-
+@app.post("/api/fetch-events")
+async def fetch_events(request: Request, payload: scraper_agent.EventsPayload):
     payload_as_dict = payload.model_dump()
 
-    # university_events = await scraper_agent.execute()
-    university_events = mock_data # for now, use data already scraped using Gemini to avoid hitting Gemini API limits during testing
+    async def event_generator():
+        yield SSEStreamResponsePayload(
+            event_type="progress",
+            message="Fetching events from BYU-I..."
+        ).to_sse()
 
-    if await request.is_disconnected():
-        print("Client disconnected before request could be analyzed.")
+        if await request.is_disconnected():
+            print("Client disconnected before request could be processed.")
 
-        return []
+            return
 
-    return await calendar_agent.execute(events=university_events, users_calendar=payload_as_dict)
+        yield SSEStreamResponsePayload(
+            event_type="progress",
+            message="Matching events from BYU-I with interests and schedule..."
+        ).to_sse()
 
-async def scrape_endpoint():
-    return await scraper_agent.execute()
+        # university_events = await scraper_agent.execute()
+        university_events = mock_data # for now, use data already scraped using Gemini to avoid hitting Gemini API limits during testing
+        
+        final_events = await calendar_agent.execute(events=university_events, users_calendar=payload_as_dict)
 
-async def calendar_endpoint(payload: scraper_agent.EventPayload): 
-    sanitized_payload = payload.model_dump()
+        if await request.is_disconnected():
+            print("Client disconnected before request could be returned.")
 
-    return await calendar_agent.execute(events=mock_data, users_calendar=sanitized_payload)
+            return
+
+        yield SSEStreamResponsePayload(
+            event_type="complete",
+            message="Successfully fetched and matched events from BYU-I.",
+            events=final_events
+        ).to_sse()
+
+    return EventSourceResponse(event_generator())
 
 if __name__ == "__main__":
     import uvicorn

@@ -7,7 +7,7 @@ from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.genai import types
 
-from agents.scraper_agent import EventModel, EventPayload
+from schemas.schema import EventModel, EventsPayload
 
 calendar_agent = Agent(
     name="calendar_agent",
@@ -59,7 +59,7 @@ runner = Runner(
 
 USER_ID = "user_123"
 
-async def execute(events: list[EventModel], users_calendar: list[EventPayload]):
+async def execute(events: list[EventModel], users_calendar: list[EventsPayload]):
     session_id = f"session_{uuid.uuid4()}"
     
     await session_service.create_session(

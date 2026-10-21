@@ -1,19 +1,12 @@
 import json
 import os
 from datetime import datetime
+
 from google import genai
 from google.genai import types
-from pydantic import BaseModel, Field
+
 from util.scraper import scrape_url
-
-class EventModel(BaseModel):
-    title: str = Field(description="The name of the event or academic society.")
-    description: str | None = Field(None, description="The event summary, details, or theme.")
-    start_time: str = Field(description="The event start time formatted as an ISO 8601 string with local offset: YYYY-MM-DDTHH:MM:SS-06:00")
-    end_time: str = Field(description="The event end time formatted as an ISO 8601 string with local offset: YYYY-MM-DDTHH:MM:SS-06:00")
-
-class EventPayload(BaseModel):
-    events: list[EventModel]
+from schemas.schema import EventModel, EventsPayload
 
 async def execute():
     api_key = os.environ.get("GEMINI_API_KEY")
@@ -53,7 +46,7 @@ async def execute():
         contents=prompt,
         config=types.GenerateContentConfig(
             response_mime_type="application/json",
-            response_schema=EventPayload,
+            response_schema=EventsPayload,
             temperature=0.0,
         ),
     )
