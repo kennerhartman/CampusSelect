@@ -14,10 +14,11 @@ struct ContentView: View {
     @AppStorage("isSetupComplete") private var isSetupComplete: Bool = false
     
     @Environment(\.modelContext) private var modelContext
-
+    
+    @Query private var events: [EventData]
+    
     @State private var isDisplayingEditProfileSheet = false
     @State private var isFetching: Bool = false
-    @State private var data: [EventData] = []
     
     var body: some View {
         NavigationStack {
@@ -31,7 +32,9 @@ struct ContentView: View {
                                 self.isFetching = false
                             }
                             
-                            self.data = await BackendService.shared.fetchEvents()
+                            let data: [EventData] = await BackendService.shared.fetchEvents()
+                                                        
+                            self.saveFetchedEvents(for: data)
                         }
                     } label: {
                         Text("Fetch Events")
@@ -42,7 +45,7 @@ struct ContentView: View {
                     } else {
                         ScrollView {
                             VStack {
-                                ForEach(self.data) { event in
+                                ForEach(self.events) { event in
                                     EventCard(event: event)
                                 }
                             }
@@ -66,6 +69,23 @@ struct ContentView: View {
                 SplashView()
             }
         }
+    }
+    
+    @MainActor
+    private func saveFetchedEvents(for data: [EventData]) {
+        let descriptor = FetchDescriptor<EventData>()
+        
+        guard let storedEvents = try? self.modelContext.fetch(descriptor) else { return }
+        
+        let existingKeys = Set(storedEvents.map { $0.compositeKey })
+        
+        for event in data {
+            if !existingKeys.contains(event.compositeKey) {
+                self.modelContext.insert(event)
+            }
+        }
+        
+        try? self.modelContext.save()
     }
 }
 

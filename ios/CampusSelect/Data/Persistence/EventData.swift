@@ -17,6 +17,10 @@ class EventData: Identifiable, Codable {
     var startTime: String
     var endTime: String
     
+    var compositeKey: String {
+        "\(self.title)_\(self.startTime)_\(self.endTime)"
+    }
+    
     enum CodingKeys: String, CodingKey {
         case title
         case description

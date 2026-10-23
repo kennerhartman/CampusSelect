@@ -7,8 +7,14 @@
 //
 
 import SwiftUI
+import SwiftData
+import EventKitUI
 
 struct EventCard: View {
+    @Environment(\.modelContext) private var modelContext
+    
+    @State private var isPresentingAddEventView: Bool = false
+    
     var event: EventData
     
     private var parsedDates: (start: Date, end: Date)? {
@@ -65,7 +71,7 @@ struct EventCard: View {
             
             VStack(spacing: 12) {
                 Button(action: {
-                    // TODO: ADD LOGIC
+                    self.isPresentingAddEventView.toggle()
                 }) {
                     Image(systemName: "plus")
                         .font(.subheadline)
@@ -77,7 +83,7 @@ struct EventCard: View {
                 .glassEffect(.regular.interactive())
                 
                 Button(action: {
-                    // TODO: ADD LOGIC
+                    self.modelContext.delete(self.event)
                 }) {
                     Image(systemName: "xmark")
                         .font(.subheadline)
@@ -95,6 +101,20 @@ struct EventCard: View {
                 .fill(Color(.secondarySystemGroupedBackground))
                 .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 4)
         )
+        .sheet(isPresented: self.$isPresentingAddEventView) {
+            if let ekEvent = EventKitService.shared.convertToEKEvent(using: self.event) {
+                NavigationStack {
+                    AddEventView(
+                        eventStore: EventKitService.shared.getStore(),
+                        event: ekEvent
+                    ) { action in
+                        if action == .saved {
+                            self.modelContext.delete(self.event)
+                        }
+                    }
+                }
+            }
+        }
     }
     
     @ViewBuilder

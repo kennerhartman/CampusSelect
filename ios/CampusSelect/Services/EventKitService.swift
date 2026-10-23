@@ -22,6 +22,10 @@ final class EventKitService {
         }
     }
     
+    func getStore() -> EKEventStore {
+        return self.store
+    }
+    
     func fetchThisWeeksCalendar() -> [EKEvent] {
         let calendar = Calendar.current
         
@@ -43,6 +47,28 @@ final class EventKitService {
         }
         
         return events ?? []
+    }
+    
+    func convertToEKEvent(using eventData: EventData) -> EKEvent? {
+        let eKEvent = EKEvent(eventStore: self.store)
+                
+        eKEvent.title = eventData.title
+        
+        if let description = eventData.eventDescription {
+            eKEvent.notes = description
+        }
+        
+        guard let startDate = Date.parseDate(for: eventData.startTime),
+                let endDate = Date.parseDate(for: eventData.endTime) else {
+            print("Failed to parse start and end date for event")
+            
+            return nil
+        }
+        
+        eKEvent.startDate = startDate
+        eKEvent.endDate = endDate
+        
+        return eKEvent
     }
     
     private func convertEKEventToEventData() -> [EventData] {
