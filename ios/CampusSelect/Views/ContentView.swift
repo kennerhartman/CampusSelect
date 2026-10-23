@@ -15,7 +15,8 @@ struct ContentView: View {
     
     @Environment(\.modelContext) private var modelContext
     
-    @Query private var events: [EventData]
+    @Query(sort: \EventData.startTime) private var events: [EventData]
+    @Query private var profiles: [UserProfile]
     
     @State private var isDisplayingEditProfileSheet = false
     @State private var isFetching: Bool = false
@@ -32,12 +33,20 @@ struct ContentView: View {
                                 self.isFetching = false
                             }
                             
-                            let data: [EventData] = await BackendService.shared.fetchEvents()
-                                                        
-                            self.saveFetchedEvents(for: data)
+                            if let profile = self.profiles.first {
+                                let data: [EventData] = await BackendService.shared.fetchEvents(with: profile)
+                                                            
+                                self.saveFetchedEvents(for: data)
+                            }
                         }
                     } label: {
                         Text("Fetch Events")
+                    }
+                    
+                    Button {
+                        try? self.modelContext.delete(model: EventData.self)
+                    } label: {
+                        Text("Delete events")
                     }
                     
                     if self.isFetching {
@@ -72,14 +81,14 @@ struct ContentView: View {
     }
     
     @MainActor
-    private func saveFetchedEvents(for data: [EventData]) {
+    private func saveFetchedEvents(for events: [EventData]) {
         let descriptor = FetchDescriptor<EventData>()
         
         guard let storedEvents = try? self.modelContext.fetch(descriptor) else { return }
         
         let existingKeys = Set(storedEvents.map { $0.compositeKey })
         
-        for event in data {
+        for event in events {
             if !existingKeys.contains(event.compositeKey) {
                 self.modelContext.insert(event)
             }

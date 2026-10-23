@@ -14,8 +14,8 @@ class EventData: Identifiable, Codable {
     var title: String
     var id: UUID = UUID()
     var eventDescription: String?
-    var startTime: String
-    var endTime: String
+    var startTime: Date
+    var endTime: Date
     
     var compositeKey: String {
         "\(self.title)_\(self.startTime)_\(self.endTime)"
@@ -28,7 +28,7 @@ class EventData: Identifiable, Codable {
         case end_time
     }
     
-    init(title: String, eventDescription: String? = nil, startTime: String, endTime: String) {
+    init(title: String, eventDescription: String? = nil, startTime: Date, endTime: Date) {
         self.title = title
         self.eventDescription = eventDescription
         self.startTime = startTime
@@ -49,7 +49,7 @@ class EventData: Identifiable, Codable {
         
         self.title = try container.decode(String.self, forKey: .title)
         self.eventDescription = try container.decodeIfPresent(String.self, forKey: .description)
-        self.startTime = try container.decode(String.self, forKey: .start_time)
-        self.endTime = try container.decode(String.self, forKey: .end_time)
+        self.startTime = Date.parseDate(for: try container.decode(String.self, forKey: .start_time)) ?? .now
+        self.endTime = Date.parseDate(for: try container.decode(String.self, forKey: .end_time)) ?? .now
     }
 }

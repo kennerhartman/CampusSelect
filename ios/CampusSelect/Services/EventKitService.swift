@@ -58,20 +58,13 @@ final class EventKitService {
             eKEvent.notes = description
         }
         
-        guard let startDate = Date.parseDate(for: eventData.startTime),
-                let endDate = Date.parseDate(for: eventData.endTime) else {
-            print("Failed to parse start and end date for event")
-            
-            return nil
-        }
-        
-        eKEvent.startDate = startDate
-        eKEvent.endDate = endDate
+        eKEvent.startDate = eventData.startTime
+        eKEvent.endDate = eventData.endTime
         
         return eKEvent
     }
     
-    private func convertEKEventToEventData() -> [EventData] {
+    func convertEKEventsToEventData() -> [EventData] {
         let events: [EKEvent] = self.fetchThisWeeksCalendar()
         
         let formatter = ISO8601DateFormatter()
@@ -84,32 +77,13 @@ final class EventKitService {
             data.append(
                 EventData(
                     title: event.title,
-                    startTime: event.startDate.ISO8601Format(),
-                    endTime: event.endDate.ISO8601Format()
+                    startTime: event.startDate,
+                    endTime: event.endDate
                 )
             )
         }
         
         return data
-    }
-    
-    func asJsonString() -> String? {
-        let events: EventsPayload = EventsPayload(events: self.convertEKEventToEventData())
-        
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
-        
-        do {
-            let json = try encoder.encode(events)
-            
-            if let jsonString = String(data: json, encoding: .utf8) {
-                return jsonString
-            }
-        } catch {
-            print("Failed to convert EventData list to jsonString: \(error)")
-        }
-        
-        return nil
     }
 }
 

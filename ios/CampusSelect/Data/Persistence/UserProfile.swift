@@ -10,7 +10,7 @@ import Foundation
 import SwiftData
 
 @Model
-class UserProfile {
+class UserProfile: Encodable {
     var name: String
     var about: String
     var gender: Gender
@@ -19,5 +19,19 @@ class UserProfile {
         self.name = name
         self.about = about
         self.gender = gender
+    }
+    
+    enum CodingKeys: String, CodingKey {
+        case name
+        case about
+        case gender
+    }
+    
+    func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        
+        try container.encode(self.name, forKey: .name)
+        try container.encode(self.about, forKey: .about)
+        try container.encode(self.gender, forKey: .gender)
     }
 }

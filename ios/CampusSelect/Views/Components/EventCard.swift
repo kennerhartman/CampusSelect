@@ -17,25 +17,9 @@ struct EventCard: View {
     
     var event: EventData
     
-    private var parsedDates: (start: Date, end: Date)? {
-        guard let start = try? Date(event.startTime, strategy: .iso8601),
-              let end = try? Date(event.endTime, strategy: .iso8601) else {
-            return nil
-        }
-        
-        return (start, end)
-    }
-    
     var body: some View {
         HStack(alignment: .top, spacing: 16) {
-            if let dates = parsedDates {
-                self.calendarIcon(from: dates.start)
-            } else {
-                Image(systemName: "calendar")
-                    .font(.title2)
-                    .foregroundStyle(.secondary)
-                    .frame(width: 44, height: 44)
-            }
+            self.calendarIcon(from: self.event.startTime)
             
             VStack(alignment: .leading, spacing: 6) {
                 Text(self.event.title)
@@ -51,20 +35,18 @@ struct EventCard: View {
                         .padding(.bottom, 2)
                 }
                 
-                if let dates = self.parsedDates {
-                    HStack(spacing: 4) {
-                        Image(systemName: "clock")
-                        
-                        Text(dates.start, format: .dateTime.weekday(.abbreviated).day().hour(.defaultDigits(amPM: .omitted)).minute().month(.abbreviated))
-                        
-                        Text("-")
-                        
-                        Text(dates.end, format: .dateTime.hour().minute())
-                    }
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.secondary)
+                HStack(spacing: 4) {
+                    Image(systemName: "clock")
+                    
+                    Text(self.event.startTime, format: .dateTime.weekday(.abbreviated).day().hour(.defaultDigits(amPM: .omitted)).minute().month(.abbreviated))
+                    
+                    Text("-")
+                    
+                    Text(self.event.endTime, format: .dateTime.hour().minute())
                 }
+                .font(.caption)
+                .fontWeight(.semibold)
+                .foregroundStyle(.secondary)
             }
             
             Spacer(minLength: 0)
@@ -146,8 +128,8 @@ struct EventCard: View {
                 event: EventData(
                     title: "Home Evening Laser Tag",
                     eventDescription: "High-intensity outdoor laser tag games hosted behind the Manwaring Center.",
-                    startTime: "2026-10-19T19:00:00Z",
-                    endTime: "2026-10-19T22:00:00Z"
+                    startTime: Date.parseDate(for: "2026-10-19T19:00:00Z") ?? .now,
+                    endTime: Date.parseDate(for: "2026-10-19T22:00:00Z") ?? .now
                 )
             )
             
@@ -155,8 +137,8 @@ struct EventCard: View {
                 event: EventData(
                     title: "Data Science Society",
                     eventDescription: "Use data analysis, Python, and machine learning to solve real problems across campus infrastructure matrices.",
-                    startTime: "2026-10-21T18:00:00Z",
-                    endTime: "2026-10-21T19:00:00Z"
+                    startTime: Date.parseDate(for: "2026-10-21T18:00:00Z") ?? .now,
+                    endTime: Date.parseDate(for: "2026-10-21T19:00:00Z") ?? .now
                 )
             )
         }

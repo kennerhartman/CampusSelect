@@ -7,23 +7,21 @@
 //
 
 import Foundation
+import SwiftData
 
 final class BackendService {
     static let shared: BackendService = BackendService()
     
     private init() {}
     
-    func fetchEvents() async -> [EventData] {
+    func fetchEvents(with profile: UserProfile) async -> [EventData] {
+        guard let json = self.buildPayload(with: profile) else { return [] }
+        
         var request: URLRequest = URLRequest(url: URL(string: "http://10.106.10.72:8000/api/fetch-events")!)
         
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        
-        let calendarRawJson = EventKitService.shared.asJsonString()
-        
-        if let json = calendarRawJson?.data(using: .utf8) {
-            request.httpBody = json
-        }
+        request.httpBody = json
         
         do {
             let (bytes, response) = try await URLSession.shared.bytes(for: request)
@@ -35,12 +33,14 @@ final class BackendService {
             }
             
             for try await line in bytes.lines {
+                print(line)
+                
                 if line.hasPrefix("data:") {
                     let jsonString = String(line.dropFirst(6)).trimmingCharacters(in: .whitespaces)
                     
                     guard let json: Data = jsonString.data(using: .utf8) else { continue }
                     
-                    if let events = self.parsePayloadEvent(with: json) {
+                    if let events = self.decodeStreamResponse(with: json) {
                         return events
                     }
                 }
@@ -52,7 +52,22 @@ final class BackendService {
         return []
     }
     
-    private func parsePayloadEvent(with data: Data) -> [EventData]? {
+    private func buildPayload(with profile: UserProfile) -> Data? {
+        guard let calendarRawJson = EventKitService.shared.convertEKEventsToEventData().asJsonString()?.data(using: .utf8),
+              let profileRawJson = profile.asJsonString()?.data(using: .utf8) else { return nil }
+        
+        guard let calendarJson = try? JSONSerialization.jsonObject(with: calendarRawJson, options: []) as? [String: Any],
+              let profileJson = try? JSONSerialization.jsonObject(with: profileRawJson, options: []) as? [String: Any] else { return nil }
+        
+        let root: [String: Any] = [
+            "calendar": calendarJson,
+            "profile": profileJson
+        ]
+        
+        return try? JSONSerialization.data(withJSONObject: root)
+    }
+    
+    private func decodeStreamResponse(with data: Data) -> [EventData]? {
         if let payload = try? JSONDecoder().decode(BackendStreamResponse.self, from: data) {
             if payload.event_type == .complete {
                 return payload.events ?? []
