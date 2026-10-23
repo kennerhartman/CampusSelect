@@ -8,7 +8,7 @@ from google.genai import types
 from util.scraper import scrape_url
 from schemas.schema import EventModel, EventsPayload
 
-async def execute():
+async def execute() -> list[EventModel]:
     api_key = os.environ.get("GEMINI_API_KEY")
     client = genai.Client(api_key=api_key)
 
@@ -42,7 +42,7 @@ async def execute():
     """
 
     response = client.models.generate_content(
-        model='models/gemini-flash-latest',
+        model='models/gemini-3.5-flash-lite',
         contents=prompt,
         config=types.GenerateContentConfig(
             response_mime_type="application/json",

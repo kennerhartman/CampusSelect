@@ -1,4 +1,5 @@
 import json
+from typing import Any
 import uuid
 
 from google.adk.agents import Agent
@@ -7,7 +8,7 @@ from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.genai import types
 
-from schemas.schema import EventModel, EventsPayload
+from schemas.schema import EventModel, FetchEventsPayload
 
 calendar_agent = Agent(
     name="calendar_agent",
@@ -28,9 +29,11 @@ calendar_agent = Agent(
     compare them against the user's calendar, and build a tailored recommendation matrix.
 
     CRITICAL FILTERING RULES:
-    1. Evaluate every single event in the scraped list. 
-    2. If an event does NOT overlap with an item in the User's Fixed Calendar and does not match dislikes, you MUST include it in the output. Do not arbitrarily omit valid non-conflicting events.
-    3. If an event starts right after a calendar task finishes, it's safe to recommend.
+    1. Evaluate every single event in the scraped list against both the User's Fixed Calendar and the provided `UserProfile` data (`name`, `about`, `gender`).
+    2. Exclude any event that overlaps with an item in the User's Fixed Calendar. Note: An event starting right after a calendar task finishes is considered back-to-back and is safe to recommend.
+    3. STRICT DEMOGRAPHIC & AFFINITY FILTER: Exclude any gender-specific or identity-exclusive organization events (such as the "Society of Women Engineers", women's/men's specific clubs, fraternities, or sororities) unless the event name and description explicitly align with `UserProfile.gender`. If a club targets a specific gender that does not match `UserProfile.gender`, you MUST exclude it.
+    4. Exclude any event that directly contradicts the user's personal preferences, background, or stated interests outlined in `UserProfile.about`.
+    5. If an event passes both the calendar availability check and the profile/gender filter, you MUST include it in the output. Do not arbitrarily omit valid non-conflicting events.
 
     CRITICAL OUTPUT RULE:
     You must respond ONLY with a raw JSON array of events.
@@ -59,7 +62,7 @@ runner = Runner(
 
 USER_ID = "user_123"
 
-async def execute(events: list[EventModel], users_calendar: list[EventsPayload]):
+async def execute(events: list[EventModel], client_payload: FetchEventsPayload):
     session_id = f"session_{uuid.uuid4()}"
     
     await session_service.create_session(
@@ -68,12 +71,19 @@ async def execute(events: list[EventModel], users_calendar: list[EventsPayload])
         session_id=session_id,
     )
 
+    profile = client_payload.profile.model_dump()
+    calendar = client_payload.calendar.model_dump()
+    serialized_events = [event.model_dump() for event in events]
+
     prompt = f"""
+    USER'S PROFILE INFORMATION:
+    {json.dumps(profile, indent=2)}
+
     USER'S EXISTING FIXED CALENDAR EVENTS:
-    {json.dumps(users_calendar, indent=2)}
+    {json.dumps(calendar, indent=2)}
     
     NEWLY SCRAPED CAMPUS EVENTS TO CHOOSE FROM:
-    {json.dumps(events, indent=2)}
+    {json.dumps(serialized_events, indent=2)}
     """
 
     message = types.Content(role="user", parts=[types.Part(text=prompt)])
