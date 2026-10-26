@@ -1,8 +1,15 @@
+import asyncio
+import threading
+from queue import Queue
+
 from fastapi import FastAPI, Request
 from sse_starlette import EventSourceResponse
 
+import apns as apns
+
 import agents.scraper_agent as scraper_agent
 import agents.calendar_agent as calendar_agent
+
 from schemas.schema import EventModel, SSEStreamResponsePayload, FetchEventsPayload
 
 mock_data = [
@@ -231,53 +238,84 @@ mock_data = [
         }
     ]
 ]
+
 app = FastAPI()
 
 @app.post("/api/fetch-events")
 async def fetch_events(request: Request, payload: FetchEventsPayload):
-    async def event_generator():
+    queue = Queue()
+    
+    def fetch():
         try:
-            yield SSEStreamResponsePayload(
-                event_type="progress",
-                message="Fetching events from BYU-I..."
-            ).to_sse()
+            queue.put(
+                SSEStreamResponsePayload(
+                    event_type="progress",
+                    message="Fetching events from BYU-I..."
+                ).to_sse()
+            )
 
-            if await request.is_disconnected():
-                print("Client disconnected before request could be processed.")
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
 
-                return
+            university_events = loop.run_until_complete(scraper_agent.execute())
+            # university_events = mock_data # for now, use data already scraped using Gemini to avoid hitting Gemini API limits during testing
 
-            # university_events = await scraper_agent.execute()
-            university_events = mock_data # for now, use data already scraped using Gemini to avoid hitting Gemini API limits during testing
+            queue.put(
+                SSEStreamResponsePayload(
+                    event_type="progress",
+                    message="Matching events from BYU-I with interests and schedule..."
+                ).to_sse()
+            )
 
-            yield SSEStreamResponsePayload(
-                event_type="progress",
-                message="Matching events from BYU-I with interests and schedule..."
-            ).to_sse()
+            final_events = loop.run_until_complete(calendar_agent.execute(events=university_events, client_payload=payload))
 
-            final_events = await calendar_agent.execute(events=university_events, client_payload=payload)
+            loop.close()
 
-            if await request.is_disconnected():
-                print("Client disconnected before request could be returned.")
+            if final_events:
+                print(final_events)
+                # TODO: Store the final_events in a database to retrieve them later when the user opens the app.
 
-                return
+                queue.put(
+                    SSEStreamResponsePayload(
+                        event_type="complete",
+                        message="Successfully fetched and matched events from BYU-I.",
+                        events=final_events
+                    ).to_sse()
+                )
 
-            yield SSEStreamResponsePayload(
-                event_type="complete",
-                message="Successfully fetched and matched events from BYU-I.",
-                events=final_events
-            ).to_sse()
+                asyncio.run(apns.send_apn(payload.device_token, final_events))
+
         except Exception as e:
             import traceback
 
-            print(f"ERROR in event_generator: {str(e)}")
-
+            print(f"ERROR in fetch function: {str(e)}")
             traceback.print_exc()
-            
-            yield SSEStreamResponsePayload(
-                event_type="error",
-                message=f"Server error: {str(e)}"
-            ).to_sse()
+
+            queue.put(
+                SSEStreamResponsePayload(
+                    event_type="error",
+                    message=f"Server error: {str(e)}"
+                ).to_sse()
+            )
+        finally:
+            queue.put(None)
+
+    thread = threading.Thread(target=fetch, daemon=True)
+    thread.start()
+    
+    async def event_generator():
+        try:
+            while True:
+                event = await asyncio.to_thread(queue.get)
+                
+                if event is None:
+                    break
+
+                yield event
+        except asyncio.CancelledError:
+            print("Client disconnected before request could be fulfilled. Still completing the fetch function in the background to completion.")
+
+            raise
 
     return EventSourceResponse(event_generator())
 

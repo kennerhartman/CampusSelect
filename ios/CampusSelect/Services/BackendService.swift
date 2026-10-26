@@ -33,8 +33,6 @@ final class BackendService {
             }
             
             for try await line in bytes.lines {
-                print(line)
-                
                 if line.hasPrefix("data:") {
                     let jsonString = String(line.dropFirst(6)).trimmingCharacters(in: .whitespaces)
                     
@@ -56,11 +54,14 @@ final class BackendService {
         guard let calendarRawJson = EventKitService.shared.convertEKEventsToEventData().asJsonString()?.data(using: .utf8),
               let profileRawJson = profile.asJsonString()?.data(using: .utf8) else { return nil }
         
+        guard let apnsToken = AppManager.shared.apnsToken else { return nil }
+        
         guard let calendarJson = try? JSONSerialization.jsonObject(with: calendarRawJson, options: []) as? [String: Any],
               let profileJson = try? JSONSerialization.jsonObject(with: profileRawJson, options: []) as? [String: Any] else { return nil }
         
         let root: [String: Any] = [
             "calendar": calendarJson,
+            "device_token": apnsToken,
             "profile": profileJson
         ]
         

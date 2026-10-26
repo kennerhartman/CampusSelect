@@ -47,10 +47,12 @@ class FetchEventsPayload(BaseModel):
     and is used to send the data to the client in a structured format.
     Attributes:
         calender (list[EventModel]): A list of events in the user's calender that the AI will use to match with new events scraped from BYU-I's events webpage.
+        device_token (str): The device token used to send push notifications to the user's device.
         profile (str): A descriptive summary of the user's name, gender, and interests used by the AI to match events with the user's preferences.
     """
 
     calendar: EventsPayload = Field(description="A list of events in the user's calender that the AI will use to match with new events scraped from BYU-I's events webpage.")
+    device_token: str = Field(description="The device token used to send push notifications to the user's device.")
     profile: ProfileModel = Field(description="A descriptive summary of the user's name, gender, and interests used by the AI to match events with the user's preferences.")
 
 class SSEStreamResponsePayload(BaseModel):

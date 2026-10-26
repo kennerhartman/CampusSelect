@@ -11,6 +11,10 @@ xcuserdata/
 *.mode2v3
 *.perspectivev3
 
+# vscode
+
+.vscode
+
 # swift
 
 *.ipa
@@ -20,6 +24,10 @@ xcuserdata/
 # python
 
 __pycache__
+
+# APNS
+
+key.pem
 
 # macos
 

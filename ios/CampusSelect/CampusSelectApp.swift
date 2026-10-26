@@ -8,10 +8,13 @@
 
 import SwiftUI
 import SwiftData
+import UserNotifications
 
 @main
 struct CampusSelectApp: App {
-    var sharedModelContainer: ModelContainer = {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    
+    static var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             UserProfile.self,
             EventData.self
@@ -32,6 +35,8 @@ struct CampusSelectApp: App {
                     EventKitService.shared.requestAccessToCalendar()
                 }
         }
-        .modelContainer(sharedModelContainer)
+        .modelContainer(CampusSelectApp.sharedModelContainer)
     }
 }
+
+

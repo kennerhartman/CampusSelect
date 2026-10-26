@@ -6,3 +6,5 @@ uvicorn==0.54.0
 requests==2.34.2
 pydantic==2.14.1
 sse-starlette==3.5.0
+aioapns==4.0
+certifi

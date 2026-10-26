@@ -64,7 +64,7 @@ final class EventKitService {
         return eKEvent
     }
     
-    func convertEKEventsToEventData() -> [EventData] {
+    func convertEKEventsToEventData() -> EventsPayload {
         let events: [EKEvent] = self.fetchThisWeeksCalendar()
         
         let formatter = ISO8601DateFormatter()
@@ -83,7 +83,7 @@ final class EventKitService {
             )
         }
         
-        return data
+        return EventsPayload(events: data)
     }
 }
 

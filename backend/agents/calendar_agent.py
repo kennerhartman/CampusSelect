@@ -20,7 +20,8 @@ calendar_agent = Agent(
         extra_body={
             "options": {
                 "num_predict": 4096,
-                "temperature": 0.0
+                "temperature": 0.0,
+                "timeout": 10.0
             }
         }
     ),
