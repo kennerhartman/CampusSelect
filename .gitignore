@@ -25,9 +25,13 @@ xcuserdata/
 
 __pycache__
 
-# APNS
+# apns
 
 key.pem
+
+# db
+
+*.db
 
 # macos
 

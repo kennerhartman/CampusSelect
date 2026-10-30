@@ -50,6 +50,30 @@ final class BackendService {
         return []
     }
     
+    func fetchEventsFromUuid(_ uuidString: String) async -> [EventData] {
+        var request: URLRequest = URLRequest(url: URL(string: "http://10.106.10.72:8000/api/fetch-stored-events?id=\(uuidString)")!)
+        
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            
+            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+                print("Error fetching events from notification. API came back with status code '\((response as? HTTPURLResponse)?.statusCode ?? -1)'.")
+                
+                return []
+            }
+            
+            if let events = self.decodeStreamResponse(with: data) {
+                return events
+            }
+        } catch {
+            print(error.localizedDescription)
+        }
+        
+        return []
+    }
+    
     private func buildPayload(with profile: UserProfile) -> Data? {
         guard let calendarRawJson = EventKitService.shared.convertEKEventsToEventData().asJsonString()?.data(using: .utf8),
               let profileRawJson = profile.asJsonString()?.data(using: .utf8) else { return nil }
@@ -70,7 +94,7 @@ final class BackendService {
     
     private func decodeStreamResponse(with data: Data) -> [EventData]? {
         if let payload = try? JSONDecoder().decode(BackendStreamResponse.self, from: data) {
-            if payload.event_type == .complete {
+            if payload.event_type == .success {
                 return payload.events ?? []
             }
         } else {

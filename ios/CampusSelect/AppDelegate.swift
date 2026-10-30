@@ -7,6 +7,7 @@
 //
 
 import SwiftUI
+import SwiftData
 import UserNotifications
 
 class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
@@ -37,15 +38,25 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         print("Failed to register for remote notifications: \(error.localizedDescription)")
     }
     
-    func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
-        // TODO: IMPLEMENT
-        
-        completionHandler([])
-    }
-    
     func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
-        // TODO: IMPLEMENT
-        
-        completionHandler()
+        if let eventId: String = response.notification.request.content.userInfo["events_id"] as? String {
+            Task {
+                let events = await BackendService.shared.fetchEventsFromUuid(eventId)
+                
+                await MainActor.run {
+                    let context = ModelContext(CampusSelectApp.sharedModelContainer)
+                    
+                    for event in events {
+                        context.insert(event)
+                    }
+                    
+                    try? context.save()
+                    
+                    completionHandler()
+                }
+            }
+        } else {
+            completionHandler()
+        }
     }
 }

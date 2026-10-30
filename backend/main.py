@@ -1,16 +1,18 @@
 import asyncio
 import threading
-from queue import Queue
+
+from uuid import uuid4
 
 from fastapi import FastAPI, Request
 from sse_starlette import EventSourceResponse
 
 import apns as apns
+import db.db as db
 
 import agents.scraper_agent as scraper_agent
 import agents.calendar_agent as calendar_agent
 
-from schemas.schema import EventModel, SSEStreamResponsePayload, FetchEventsPayload
+from schemas.schema import EventModel, EventsPayload, SSEStreamResponsePayload, FetchEventsPayload
 
 mock_data = [
     EventModel(**item) for item in [
@@ -243,83 +245,102 @@ app = FastAPI()
 
 @app.post("/api/fetch-events")
 async def fetch_events(request: Request, payload: FetchEventsPayload):
-    queue = Queue()
-    
-    def fetch():
+    queue = asyncio.Queue()
+
+    async def fetch():
         try:
-            queue.put(
+            await queue.put(
                 SSEStreamResponsePayload(
                     event_type="progress",
                     message="Fetching events from BYU-I..."
                 ).to_sse()
             )
 
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-
-            university_events = loop.run_until_complete(scraper_agent.execute())
+            university_events = await scraper_agent.execute()
             # university_events = mock_data # for now, use data already scraped using Gemini to avoid hitting Gemini API limits during testing
 
-            queue.put(
+            await queue.put(
                 SSEStreamResponsePayload(
                     event_type="progress",
                     message="Matching events from BYU-I with interests and schedule..."
                 ).to_sse()
             )
 
-            final_events = loop.run_until_complete(calendar_agent.execute(events=university_events, client_payload=payload))
-
-            loop.close()
+            final_events = await calendar_agent.execute(events=university_events, client_payload=payload)
 
             if final_events:
-                print(final_events)
-                # TODO: Store the final_events in a database to retrieve them later when the user opens the app.
+                events_id = str(uuid4())
+                events_model = EventsPayload(events=final_events)
 
-                queue.put(
+                db.insert_events_payload(events_id, events_model)
+                
+                await queue.put(
                     SSEStreamResponsePayload(
-                        event_type="complete",
+                        event_type="success",
                         message="Successfully fetched and matched events from BYU-I.",
                         events=final_events
                     ).to_sse()
                 )
 
-                asyncio.run(apns.send_apn(payload.device_token, final_events))
-
+                await apns.send_apn(payload.device_token, events_id)
         except Exception as e:
             import traceback
 
             print(f"ERROR in fetch function: {str(e)}")
             traceback.print_exc()
 
-            queue.put(
+            await queue.put(
                 SSEStreamResponsePayload(
                     event_type="error",
                     message=f"Server error: {str(e)}"
                 ).to_sse()
             )
         finally:
-            queue.put(None)
+            await queue.put(None)
 
-    thread = threading.Thread(target=fetch, daemon=True)
-    thread.start()
-    
+    asyncio.create_task(fetch())
+
     async def event_generator():
         try:
             while True:
-                event = await asyncio.to_thread(queue.get)
+                event = await queue.get()
                 
                 if event is None:
                     break
 
                 yield event
         except asyncio.CancelledError:
-            print("Client disconnected before request could be fulfilled. Still completing the fetch function in the background to completion.")
-
             raise
 
     return EventSourceResponse(event_generator())
 
+@app.get("/api/fetch-stored-events")
+async def fetch_stored_events(id: str):
+    from uuid import UUID
+
+    try:
+        events = db.get_events_payload(UUID(id))
+
+        if events:
+            return SSEStreamResponsePayload(
+                event_type="success",
+                message=f"Successfully fetched stored events for ID '{id}'.",
+                events=events.events
+            )
+        else:
+            return SSEStreamResponsePayload(
+                event_type="error",
+                message=f"No events found for the provided ID '{id}'."
+            )
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"Server error: {str(e)}"
+        }
+
 if __name__ == "__main__":
     import uvicorn
+
+    db.create_db()
 
     uvicorn.run(app, port=8000)

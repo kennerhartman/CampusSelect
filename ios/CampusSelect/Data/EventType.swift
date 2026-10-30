@@ -13,7 +13,7 @@ import EventKit
 
 enum EventType: Decodable {
     case progress
-    case complete
+    case success
     case error
     case unknown
     
@@ -23,7 +23,7 @@ enum EventType: Decodable {
         
         switch status {
         case "progress": self = .progress
-        case "complete": self = .complete
+        case "success": self = .success
         case "error": self = .error
         default: self = .unknown
         }
